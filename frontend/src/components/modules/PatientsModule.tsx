@@ -147,7 +147,7 @@ export function PatientsModule() {
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField label="Mã bệnh nhân" value={formData.patientCode || ''} onChange={(e) => setFormData({ ...formData, patientCode: e.target.value })} />
           <TextField label="Họ và tên" value={formData.fullName || ''} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
-          <TextField label="Ngày sinh" type="date" value={formData.dateOfBirth || ''} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} InputLabelProps={{ shrink: true }} />
+          <TextField label="Ngày sinh" type="date" value={formData.dateOfBirth || ''} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField label="Giới tính" select value={formData.gender || ''} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
             <MenuItem value="Nam">Nam</MenuItem>
             <MenuItem value="Nữ">Nữ</MenuItem>

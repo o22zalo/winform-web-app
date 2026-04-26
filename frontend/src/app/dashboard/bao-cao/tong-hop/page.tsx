@@ -9,7 +9,7 @@ import { ReportFilter } from '@/components/ReportFilter/ReportFilter'
 export default function BaoCaoTongHopPage() {
   return (
     <Box>
-      <PageHeader title="Báo cáo tổng hợp" subtitle="Xem nhanh dữ liệu tổng hợp" icon={<BarChart3 size={20} />} />
+      <PageHeader title="Báo cáo tổng hợp" subtitle="Xem nhanh dữ liệu tổng hợp" />
       <ReportFilter onFilter={() => undefined} />
       <PrintExportBar onPrint={() => undefined} onExportPDF={() => undefined} onExportExcel={() => undefined} />
     </Box>

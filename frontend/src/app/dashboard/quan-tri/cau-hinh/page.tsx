@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 export default function CauHinhPage() {
   return (
     <Box>
-      <PageHeader title="Cấu hình" subtitle="Trang đang được hoàn thiện" icon={<Settings size={20} />} />
+      <PageHeader title="Cấu hình" subtitle="Trang đang được hoàn thiện" />
       <Typography>Module cấu hình sẽ được triển khai tiếp theo.</Typography>
     </Box>
   )

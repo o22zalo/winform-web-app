@@ -38,7 +38,7 @@ export default function HangHoaPage() {
 
   return (
     <Box>
-      <PageHeader title="Danh mục hàng hóa" subtitle="Danh sách hàng hóa" icon={<Package size={20} />} />
+      <PageHeader title="Danh mục hàng hóa" subtitle="Danh sách hàng hóa" />
       <CrudToolbar
         onAdd={() => setDialogOpen(true)}
         onEdit={() => setDialogOpen(true)}

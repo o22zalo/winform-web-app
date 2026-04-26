@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 export default function BaoCaoChiTietPage() {
   return (
     <Box>
-      <PageHeader title="Báo cáo chi tiết" subtitle="Trang đang được hoàn thiện" icon={<FileText size={20} />} />
+      <PageHeader title="Báo cáo chi tiết" subtitle="Trang đang được hoàn thiện" />
       <Typography>Module báo cáo chi tiết sẽ được triển khai tiếp theo.</Typography>
     </Box>
   )

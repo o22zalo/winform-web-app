@@ -9,7 +9,7 @@ import { StatusBar } from '@/components/layout/StatusBar'
 import { useAppStore } from '@/lib/store/uiStore'
 import { useState } from 'react'
 
-export function AppShell() {
+export function AppShell({ children }: { children?: React.ReactNode }) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed)

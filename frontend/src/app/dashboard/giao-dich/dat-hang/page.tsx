@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 export default function DatHangPage() {
   return (
     <Box>
-      <PageHeader title="Đặt hàng" subtitle="Trang đang được hoàn thiện" icon={<ShoppingCart size={20} />} />
+      <PageHeader title="Đặt hàng" subtitle="Trang đang được hoàn thiện" />
       <Typography>Module đặt hàng sẽ được triển khai tiếp theo.</Typography>
     </Box>
   )
