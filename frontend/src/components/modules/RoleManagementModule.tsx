@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Paper,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -21,7 +22,6 @@ import { AppGrid } from '@/components/common/AppGrid'
 import { CrudToolbar } from '@/components/common/CrudToolbar'
 import { ConfirmDialog, FormDialog } from '@/components/common/FormDialog'
 import { useApiError } from '@/hooks/useApiError'
-import { agGridVietnamese } from '@/lib/agGridVietnamese'
 import { apiClient } from '@/lib/apiClient'
 import { useAppStore } from '@/lib/store/uiStore'
 
@@ -254,15 +254,6 @@ export function RoleManagementModule() {
     savePermissionsMutation.mutate({ roleId: selectedRole.id, permissionIds })
   }
 
-  const handleFormSubmit = (data: RoleFormData) => {
-    if (selectedRole) {
-      updateMutation.mutate({ id: selectedRole.id, data })
-      return
-    }
-
-    createMutation.mutate(data)
-  }
-
   const handlePrint = () => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
@@ -359,16 +350,7 @@ export function RoleManagementModule() {
           rowData={filteredData}
           columnDefs={columnDefs}
           loading={isLoading}
-          localeText={agGridVietnamese}
-          rowSelection={{ mode: 'singleRow', enableClickSelection: true }}
-          onSelectionChanged={(event) => {
-            const selectedRows = event.api.getSelectedRows() as Role[]
-            setSelectedRole(selectedRows[0] ?? null)
-          }}
-          onRowDoubleClicked={(event) => {
-            setSelectedRole(event.data)
-            setFormOpen(true)
-          }}
+          onRowSelected={(role) => setSelectedRole(role)}
         />
       </Box>
 
@@ -405,44 +387,57 @@ export function RoleManagementModule() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         title={selectedRole ? 'Cập nhật vai trò' : 'Thêm vai trò'}
-        onSubmit={handleFormSubmit}
-        initialData={
-          selectedRole ?? {
-            code: '',
-            name: '',
-            description: '',
-            is_active: true,
+        onConfirm={() => {
+          if (selectedRole) {
+            updateMutation.mutate({
+              id: selectedRole.id,
+              data: {
+                code: selectedRole.code,
+                name: selectedRole.name,
+                description: selectedRole.description,
+                is_active: selectedRole.is_active,
+              },
+            })
+          } else {
+            createMutation.mutate({
+              code: '',
+              name: '',
+              description: '',
+              is_active: true,
+            })
           }
-        }
-        fields={[
-          {
-            name: 'code',
-            label: 'Mã vai trò',
-            type: 'text',
-            required: true,
-            disabled: Boolean(selectedRole),
-          },
-          {
-            name: 'name',
-            label: 'Tên vai trò',
-            type: 'text',
-            required: true,
-          },
-          {
-            name: 'description',
-            label: 'Mô tả',
-            type: 'text',
-            multiline: true,
-            rows: 3,
-          },
-          {
-            name: 'is_active',
-            label: 'Đang hoạt động',
-            type: 'checkbox',
-          },
-        ]}
-        loading={createMutation.isPending || updateMutation.isPending}
-      />
+        }}
+      >
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Mã vai trò"
+            value={selectedRole?.code ?? ''}
+            onChange={(e) =>
+              setSelectedRole((prev) => (prev ? { ...prev, code: e.target.value } : null))
+            }
+            disabled={!!selectedRole}
+            fullWidth
+          />
+          <TextField
+            label="Tên vai trò"
+            value={selectedRole?.name ?? ''}
+            onChange={(e) =>
+              setSelectedRole((prev) => (prev ? { ...prev, name: e.target.value } : null))
+            }
+            fullWidth
+          />
+          <TextField
+            label="Mô tả"
+            value={selectedRole?.description ?? ''}
+            onChange={(e) =>
+              setSelectedRole((prev) => (prev ? { ...prev, description: e.target.value } : null))
+            }
+            multiline
+            rows={3}
+            fullWidth
+          />
+        </Stack>
+      </FormDialog>
 
       <ConfirmDialog
         open={deleteConfirmOpen}
@@ -450,7 +445,6 @@ export function RoleManagementModule() {
         onConfirm={() => selectedRole && deleteMutation.mutate(selectedRole.id)}
         title="Xác nhận xóa vai trò"
         message={`Bạn có chắc muốn xóa vai trò ${selectedRole?.name ?? ''}?`}
-        loading={deleteMutation.isPending}
       />
 
       <Dialog
