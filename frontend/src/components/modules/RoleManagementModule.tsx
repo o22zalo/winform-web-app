@@ -1,35 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
-  TextField,
   Checkbox,
-  FormControlLabel,
-  Typography,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  Paper,
   Stack,
-  Alert,
+  Typography,
 } from '@mui/material'
-import { Plus, Pencil, Trash2, Printer, FileSpreadsheet, Shield, Users } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColDef } from 'ag-grid-community'
+import { Shield, Users } from 'lucide-react'
 import { AppGrid } from '@/components/common/AppGrid'
-import { FormDialog, ConfirmDialog } from '@/components/common/FormDialog'
-import { apiClient } from '@/lib/apiClient'
+import { CrudToolbar } from '@/components/common/CrudToolbar'
+import { ConfirmDialog, FormDialog } from '@/components/common/FormDialog'
 import { useApiError } from '@/hooks/useApiError'
+import { agGridVietnamese } from '@/lib/agGridVietnamese'
+import { apiClient } from '@/lib/apiClient'
 
 interface Role {
   id: number
@@ -53,11 +47,6 @@ interface Permission {
   name: string
 }
 
-interface RolePermission {
-  permission_id: number
-  granted: boolean
-}
-
 interface UserByRole {
   username: string
   fullName: string
@@ -66,20 +55,26 @@ interface UserByRole {
   assigned_by: string
 }
 
+interface RoleFormData {
+  code: string
+  name: string
+  description: string
+  is_active: boolean
+}
+
 export function RoleManagementModule() {
   const queryClient = useQueryClient()
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
-  const [rolePermissions, setRolePermissions] = useState<Record<number, boolean>>({})
-  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
-  const [formDialogOpen, setFormDialogOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [usersDialogOpen, setUsersDialogOpen] = useState(false)
-  const [formData, setFormData] = useState<Partial<Role>>({})
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const { handleError, ErrorSnackbar } = useApiError()
 
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  const [searchText, setSearchText] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false)
+  const [rolePermissions, setRolePermissions] = useState<Record<number, boolean>>({})
+
+  const { data: roles = [], isLoading } = useQuery({
     queryKey: ['roles'],
     queryFn: () => apiClient.get<Role[]>('/api/admin/roles'),
   })
@@ -96,96 +91,128 @@ export function RoleManagementModule() {
 
   const { data: usersByRole = [] } = useQuery({
     queryKey: ['usersByRole', selectedRole?.id],
-    queryFn: () => apiClient.get<UserByRole[]>(`/api/admin/roles/${selectedRole?.id}/users`),
-    enabled: !!selectedRole?.id && usersDialogOpen,
+    queryFn: () => apiClient.get<UserByRole[]>(`/api/admin/roles/${selectedRole!.id}/users`),
+    enabled: Boolean(selectedRole?.id && usersDialogOpen),
   })
 
   const createMutation = useMutation({
-    mutationFn: (data: Partial<Role>) => apiClient.post<Role>('/api/admin/roles', data),
+    mutationFn: (data: RoleFormData) => apiClient.post<Role>('/api/admin/roles', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
-      setFormDialogOpen(false)
-      setFormData({})
+      setFormOpen(false)
     },
     onError: (error) => handleError(error, 'tạo vai trò'),
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: Role) => apiClient.put<Role>(`/api/admin/roles/${data.id}`, data),
+    mutationFn: ({ id, data }: { id: number; data: RoleFormData }) =>
+      apiClient.put<Role>(`/api/admin/roles/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
-      setFormDialogOpen(false)
-      setFormData({})
-      setSelectedRole(null)
+      setFormOpen(false)
     },
     onError: (error) => handleError(error, 'cập nhật vai trò'),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiClient.put(`/api/admin/roles/${id}`, { isActive: false }),
+    mutationFn: (id: number) => apiClient.delete(`/api/admin/roles/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] })
-      setConfirmOpen(false)
+      setDeleteConfirmOpen(false)
       setSelectedRole(null)
     },
     onError: (error) => handleError(error, 'xóa vai trò'),
   })
 
+  const savePermissionsMutation = useMutation({
+    mutationFn: ({ roleId, permissionIds }: { roleId: number; permissionIds: number[] }) =>
+      apiClient.post(`/api/admin/roles/${roleId}/permissions`, {
+        permission_ids: permissionIds,
+      }),
+    onSuccess: () => {
+      setPermissionDialogOpen(false)
+      setSelectedRole(null)
+    },
+    onError: (error) => handleError(error, 'lưu quyền'),
+  })
+
+  const filteredData = useMemo(() => {
+    if (!searchText.trim()) {
+      return roles
+    }
+
+    const keyword = searchText.toLowerCase()
+    return roles.filter(
+      (role) =>
+        role.code.toLowerCase().includes(keyword) ||
+        role.name.toLowerCase().includes(keyword) ||
+        role.description?.toLowerCase().includes(keyword)
+    )
+  }, [roles, searchText])
+
   const columnDefs: ColDef<Role>[] = [
-    { field: 'code', headerName: 'Mã vai trò', width: 150 },
-    { field: 'name', headerName: 'Tên vai trò', width: 200 },
-    { field: 'description', headerName: 'Mô tả', flex: 1 },
+    {
+      field: 'code',
+      headerName: 'Mã vai trò',
+      width: 150,
+      filter: 'agTextColumnFilter',
+    },
+    {
+      field: 'name',
+      headerName: 'Tên vai trò',
+      width: 220,
+      filter: 'agTextColumnFilter',
+    },
+    {
+      field: 'description',
+      headerName: 'Mô tả',
+      flex: 1,
+      filter: 'agTextColumnFilter',
+    },
     {
       field: 'is_active',
       headerName: 'Trạng thái',
-      width: 120,
-      valueFormatter: (params) => (params.value ? 'Hoạt động' : 'Ngưng'),
+      width: 140,
+      filter: false,
+      cellRenderer: (params: { value: boolean }) => (
+        <Chip
+          size="small"
+          color={params.value ? 'success' : 'default'}
+          label={params.value ? 'Hoạt động' : 'Vô hiệu'}
+        />
+      ),
     },
   ]
 
-  const handleOpenPermissionDialog = async (role: Role) => {
-    setSelectedRole(role)
-    setLoading(true)
-    setError('')
-
-    try {
-      const data = await apiClient.get<RolePermission[]>(`/api/admin/roles/${role.id}/permissions`)
-      const permMap: Record<number, boolean> = {}
-      data.forEach((rp) => {
-        permMap[rp.permission_id] = rp.granted
-      })
-      setRolePermissions(permMap)
-      setPermissionDialogOpen(true)
-    } catch (err) {
-      setError('Không thể tải quyền vai trò')
-    } finally {
-      setLoading(false)
-    }
+  const handleOpenCreate = () => {
+    setSelectedRole(null)
+    setFormOpen(true)
   }
 
-  const handleSavePermissions = async () => {
-    if (!selectedRole) return
+  const handleOpenEdit = () => {
+    if (!selectedRole) {
+      return
+    }
+    setFormOpen(true)
+  }
 
-    setLoading(true)
-    setError('')
+  const handleOpenPermissionDialog = async () => {
+    if (!selectedRole) {
+      return
+    }
 
     try {
-      const permissionsToSave = Object.entries(rolePermissions).map(([permId, granted]) => ({
-        permission_id: parseInt(permId),
-        granted,
-      }))
-
-      await apiClient.post(`/api/admin/roles/${selectedRole.id}/permissions`, {
-        permissions: permissionsToSave,
-      })
-
-      setPermissionDialogOpen(false)
-      setSelectedRole(null)
-      setRolePermissions({})
-    } catch (err) {
-      setError('Không thể lưu quyền vai trò')
-    } finally {
-      setLoading(false)
+      const data = await apiClient.get<Array<{ permission_id: number }>>(
+        `/api/admin/roles/${selectedRole.id}/permissions`
+      )
+      const mappedPermissions = data.reduce<Record<number, boolean>>((acc, item) => {
+        acc[item.permission_id] = true
+        return acc
+      }, {})
+      setRolePermissions(mappedPermissions)
+      setPermissionDialogOpen(true)
+    } catch (error) {
+      handleError(error, 'tải quyền vai trò')
     }
   }
 
@@ -197,39 +224,78 @@ export function RoleManagementModule() {
   }
 
   const handleSelectAllModule = (moduleId: number, checked: boolean) => {
-    const modulePerms = permissions.filter((p) => p.module_id === moduleId)
-    const updates: Record<number, boolean> = {}
-    modulePerms.forEach((p) => {
-      updates[p.id] = checked
+    const modulePermissions = permissions.filter((permission) => permission.module_id === moduleId)
+    setRolePermissions((prev) => {
+      const next = { ...prev }
+      modulePermissions.forEach((permission) => {
+        next[permission.id] = checked
+      })
+      return next
     })
-    setRolePermissions((prev) => ({ ...prev, ...updates }))
   }
 
-  const getModulePermissions = (moduleId: number) => {
-    return permissions.filter((p) => p.module_id === moduleId)
-  }
+  const getModulePermissions = (moduleId: number) =>
+    permissions.filter((permission) => permission.module_id === moduleId)
 
   const isModuleFullySelected = (moduleId: number) => {
-    const modulePerms = getModulePermissions(moduleId)
-    return modulePerms.length > 0 && modulePerms.every((p) => rolePermissions[p.id] === true)
+    const modulePermissions = getModulePermissions(moduleId)
+    return modulePermissions.length > 0 && modulePermissions.every((item) => rolePermissions[item.id])
+  }
+
+  const handleSavePermissions = () => {
+    if (!selectedRole) {
+      return
+    }
+
+    const permissionIds = Object.entries(rolePermissions)
+      .filter(([, granted]) => granted)
+      .map(([id]) => Number(id))
+
+    savePermissionsMutation.mutate({ roleId: selectedRole.id, permissionIds })
+  }
+
+  const handleFormSubmit = (data: RoleFormData) => {
+    if (selectedRole) {
+      updateMutation.mutate({ id: selectedRole.id, data })
+      return
+    }
+
+    createMutation.mutate(data)
   }
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank')
-    if (!printWindow) return
+    if (!printWindow) {
+      return
+    }
 
-    const html = `
+    const rowsHtml = filteredData
+      .map(
+        (role) => `
+          <tr>
+            <td>${role.code}</td>
+            <td>${role.name}</td>
+            <td>${role.description ?? ''}</td>
+            <td>${role.is_active ? 'Hoạt động' : 'Vô hiệu'}</td>
+          </tr>
+        `
+      )
+      .join('')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8" />
           <title>Danh sách vai trò</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             h1 { text-align: center; color: #1976d2; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background-color: #1976d2; color: white; padding: 10px; text-align: left; border: 1px solid #ddd; }
-            td { padding: 8px; border: 1px solid #ddd; }
-            tr:nth-child(even) { background-color: #f2f2f2; }
-            .print-date { text-align: right; font-size: 12px; color: #666; margin-top: 20px; }
+            th { background: #1976d2; color: white; border: 1px solid #ddd; padding: 8px; }
+            td { border: 1px solid #ddd; padding: 8px; }
+            tr:nth-child(even) { background: #f2f2f2; }
+            .print-date { text-align: right; font-size: 12px; color: #666; margin-top: 16px; }
           </style>
         </head>
         <body>
@@ -243,28 +309,14 @@ export function RoleManagementModule() {
                 <th>Trạng thái</th>
               </tr>
             </thead>
-            <tbody>
-              ${roles
-                .map(
-                  (role) => `
-                <tr>
-                  <td>${role.code}</td>
-                  <td>${role.name}</td>
-                  <td>${role.description || ''}</td>
-                  <td>${role.is_active ? 'Hoạt động' : 'Ngưng'}</td>
-                </tr>
-              `
-                )
-                .join('')}
-            </tbody>
+            <tbody>${rowsHtml}</tbody>
           </table>
           <div class="print-date">Ngày in: ${new Date().toLocaleString('vi-VN')}</div>
         </body>
       </html>
-    `
-
-    printWindow.document.write(html)
+    `)
     printWindow.document.close()
+
     setTimeout(() => {
       printWindow.print()
     }, 250)
@@ -272,153 +324,134 @@ export function RoleManagementModule() {
 
   const handleExportExcel = () => {
     const headers = ['Mã vai trò', 'Tên vai trò', 'Mô tả', 'Trạng thái']
-    let csv = headers.join(',') + '\n'
+    let csv = `${headers.join(',')}\n`
 
-    roles.forEach((role) => {
+    filteredData.forEach((role) => {
       const row = [
         role.code,
         role.name,
-        role.description || '',
-        role.is_active ? 'Hoạt động' : 'Ngưng',
+        role.description ?? '',
+        role.is_active ? 'Hoạt động' : 'Vô hiệu',
       ]
-      csv += row.map((cell) => `"${cell}"`).join(',') + '\n'
+      csv += `${row.map((cell) => `"${cell}"`).join(',')}\n`
     })
 
-    const BOM = '﻿'
-    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `vai-tro-${new Date().toISOString().slice(0, 10)}.csv`
     link.click()
+    URL.revokeObjectURL(link.href)
   }
 
   return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box
+      sx={{
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, overflow: 'hidden' }}>
         <AppGrid
-          rowData={roles}
+          rowData={filteredData}
           columnDefs={columnDefs}
-          loading={rolesLoading}
-          onRowSelected={(role) => setSelectedRole(role)}
+          loading={isLoading}
+          localeText={agGridVietnamese}
+          rowSelection={{ mode: 'singleRow', enableClickSelection: true }}
+          onSelectionChanged={(event) => {
+            const selectedRows = event.api.getSelectedRows() as Role[]
+            setSelectedRole(selectedRows[0] ?? null)
+          }}
+          onRowDoubleClicked={(event) => {
+            setSelectedRole(event.data)
+            setFormOpen(true)
+          }}
         />
       </Box>
 
       <Box sx={{ flexShrink: 0, p: 1, pt: 0, backgroundColor: 'background.default' }}>
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'center',
-            px: 1,
-            py: 0.75,
-            border: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            flexWrap: 'wrap',
-            gap: { xs: 0.5, sm: 1 },
-          }}
-        >
-          <Button
-            startIcon={<Plus size={16} />}
-            onClick={() => {
-              setFormData({})
-              setSelectedRole(null)
-              setFormDialogOpen(true)
-            }}
-          >
-            Thêm
-          </Button>
-          <Button
-            startIcon={<Pencil size={16} />}
-            onClick={() => {
-              if (selectedRole) {
-                setFormData(selectedRole)
-                setFormDialogOpen(true)
-              }
-            }}
-            disabled={!selectedRole}
-          >
-            Sửa
-          </Button>
-          <Button
-            startIcon={<Trash2 size={16} />}
-            onClick={() => selectedRole && setConfirmOpen(true)}
-            disabled={!selectedRole}
-            color="error"
-          >
-            Xóa
-          </Button>
-          <Button
-            startIcon={<Shield size={16} />}
-            onClick={() => selectedRole && handleOpenPermissionDialog(selectedRole)}
-            disabled={!selectedRole}
-          >
-            Phân quyền
-          </Button>
-          <Button
-            startIcon={<Users size={16} />}
-            onClick={() => selectedRole && setUsersDialogOpen(true)}
-            disabled={!selectedRole}
-          >
-            Xem User
-          </Button>
-          <Button startIcon={<Printer size={16} />} onClick={handlePrint}>
-            In
-          </Button>
-          <Button startIcon={<FileSpreadsheet size={16} />} onClick={handleExportExcel}>
-            Xuất Excel
-          </Button>
-        </Stack>
+        <CrudToolbar
+          onAdd={handleOpenCreate}
+          onEdit={handleOpenEdit}
+          onDelete={() => setDeleteConfirmOpen(true)}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['roles'] })}
+          onPrint={handlePrint}
+          onExportExcel={handleExportExcel}
+          onSearch={setSearchText}
+          searchValue={searchText}
+          searchPlaceholder="Tìm mã, tên, mô tả..."
+          disableEdit={!selectedRole}
+          disableDelete={!selectedRole}
+          extensibleMenuItems={[
+            {
+              label: 'Quản lý quyền',
+              icon: Shield,
+              onClick: handleOpenPermissionDialog,
+              disabled: !selectedRole,
+            },
+            {
+              label: 'Xem users',
+              icon: Users,
+              onClick: () => setUsersDialogOpen(true),
+              disabled: !selectedRole,
+            },
+          ]}
+        />
       </Box>
 
       <FormDialog
-        open={formDialogOpen}
-        title={selectedRole ? 'Sửa vai trò' : 'Thêm vai trò'}
-        onClose={() => {
-          setFormDialogOpen(false)
-          setFormData({})
-          setSelectedRole(null)
-        }}
-        onConfirm={() => {
-          if (selectedRole) {
-            updateMutation.mutate({ ...selectedRole, ...formData } as Role)
-          } else {
-            createMutation.mutate(formData)
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={selectedRole ? 'Cập nhật vai trò' : 'Thêm vai trò'}
+        onSubmit={handleFormSubmit}
+        initialData={
+          selectedRole ?? {
+            code: '',
+            name: '',
+            description: '',
+            is_active: true,
           }
-        }}
-      >
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Mã vai trò"
-            value={formData.code || ''}
-            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-            disabled={!!selectedRole}
-            fullWidth
-          />
-          <TextField
-            label="Tên vai trò"
-            value={formData.name || ''}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Mô tả"
-            value={formData.description || ''}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            multiline
-            rows={3}
-            fullWidth
-          />
-        </Stack>
-      </FormDialog>
+        }
+        fields={[
+          {
+            name: 'code',
+            label: 'Mã vai trò',
+            type: 'text',
+            required: true,
+            disabled: Boolean(selectedRole),
+          },
+          {
+            name: 'name',
+            label: 'Tên vai trò',
+            type: 'text',
+            required: true,
+          },
+          {
+            name: 'description',
+            label: 'Mô tả',
+            type: 'text',
+            multiline: true,
+            rows: 3,
+          },
+          {
+            name: 'is_active',
+            label: 'Đang hoạt động',
+            type: 'checkbox',
+          },
+        ]}
+        loading={createMutation.isPending || updateMutation.isPending}
+      />
 
       <ConfirmDialog
-        open={confirmOpen}
-        title="Xác nhận xóa"
-        message={`Bạn có chắc chắn muốn xóa vai trò "${selectedRole?.name}"?`}
-        onClose={() => setConfirmOpen(false)}
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={() => selectedRole && deleteMutation.mutate(selectedRole.id)}
+        title="Xác nhận xóa vai trò"
+        message={`Bạn có chắc muốn xóa vai trò ${selectedRole?.name ?? ''}?`}
+        loading={deleteMutation.isPending}
       />
 
       <Dialog
@@ -427,17 +460,11 @@ export function RoleManagementModule() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Phân quyền: {selectedRole?.name}</DialogTitle>
-        <DialogContent dividers>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
+        <DialogTitle>Quản lý quyền - {selectedRole?.name}</DialogTitle>
+        <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {modules.map((module) => {
-              const modulePerms = getModulePermissions(module.id)
+              const modulePermissions = getModulePermissions(module.id)
               const allSelected = isModuleFullySelected(module.id)
 
               return (
@@ -447,7 +474,9 @@ export function RoleManagementModule() {
                       control={
                         <Checkbox
                           checked={allSelected}
-                          onChange={(e) => handleSelectAllModule(module.id, e.target.checked)}
+                          onChange={(event) =>
+                            handleSelectAllModule(module.id, event.target.checked)
+                          }
                         />
                       }
                       label={
@@ -460,17 +489,17 @@ export function RoleManagementModule() {
                   </Box>
 
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, ml: 4 }}>
-                    {modulePerms.map((perm) => (
+                    {modulePermissions.map((permission) => (
                       <FormControlLabel
-                        key={perm.id}
+                        key={permission.id}
                         control={
                           <Checkbox
-                            checked={rolePermissions[perm.id] === true}
-                            onChange={() => handleTogglePermission(perm.id)}
                             size="small"
+                            checked={rolePermissions[permission.id] === true}
+                            onChange={() => handleTogglePermission(permission.id)}
                           />
                         }
-                        label={perm.name}
+                        label={permission.name}
                       />
                     ))}
                   </Box>
@@ -481,42 +510,40 @@ export function RoleManagementModule() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPermissionDialogOpen(false)}>Hủy</Button>
-          <Button onClick={handleSavePermissions} variant="contained" disabled={loading}>
-            {loading ? 'Đang lưu...' : 'Lưu'}
+          <Button
+            variant="contained"
+            onClick={handleSavePermissions}
+            disabled={savePermissionsMutation.isPending}
+          >
+            {savePermissionsMutation.isPending ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={usersDialogOpen} onClose={() => setUsersDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Danh sách User - {selectedRole?.name}</DialogTitle>
-        <DialogContent dividers>
+        <DialogTitle>Danh sách user - {selectedRole?.name}</DialogTitle>
+        <DialogContent>
           {usersByRole.length === 0 ? (
             <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
               Chưa có user nào được gán vai trò này
             </Typography>
           ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Tài khoản</TableCell>
-                    <TableCell>Họ tên</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Ngày gán</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {usersByRole.map((user) => (
-                    <TableRow key={user.username}>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.fullName}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{new Date(user.assigned_at).toLocaleDateString('vi-VN')}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {usersByRole.map((user) => (
+                <Paper key={user.username} sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {user.fullName} ({user.username})
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {user.email || 'Chưa có email'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Gán lúc {new Date(user.assigned_at).toLocaleString('vi-VN')} bởi{' '}
+                    {user.assigned_by}
+                  </Typography>
+                </Paper>
+              ))}
+            </Stack>
           )}
         </DialogContent>
         <DialogActions>

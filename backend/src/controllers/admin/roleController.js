@@ -63,9 +63,9 @@ export const roleController = {
   async updateRole(req, res) {
     try {
       const { id } = req.params
-      const { name, description, isActive } = req.body
+      const { name, description, is_active } = req.body
 
-      const result = await roleRepository.updateRole(id, name, description, isActive)
+      const result = await roleRepository.updateRole(id, name, description, is_active)
 
       if (result.rows.length === 0) {
         return errorResponse(res, 'Vai trò không tồn tại', 404)
