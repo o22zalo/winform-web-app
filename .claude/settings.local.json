@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-git)",
+      "Bash(cp -r src/components frontend/src/)",
+      "Bash(cp -r src/lib frontend/src/)",
+      "Bash(cp -r src/themes frontend/src/)",
+      "Bash(cp -r src/types frontend/src/)"
+    ]
+  }
+}

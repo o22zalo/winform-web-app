@@ -1,0 +1,67 @@
+:root {
+  --app-primary: #1a6fc4;
+  --app-sidebar-bg: #1e3a5f;
+  --app-accent: #f0a500;
+  --app-bg: #edf4fb;
+  --app-panel: #ffffff;
+  --app-grid-header: #dfe8f5;
+  --app-border: #c5d0df;
+  --app-status: #f6f8fb;
+  --app-font-size: 13px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--app-bg);
+}
+
+body {
+  color: #16314f;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#__next,
+main {
+  min-height: 100vh;
+}
+
+.legacy-grid-shell {
+  border: 1px solid var(--app-border);
+  background: white;
+}
+
+[data-mui-color-scheme="dark"] .legacy-grid-shell {
+  background: #1a1f2e;
+}
+
+.legacy-watermark {
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  pointer-events: none;
+  background-image:
+    linear-gradient(transparent 0, transparent 28px, rgba(255,255,255,0.4) 28px, rgba(255,255,255,0.4) 30px),
+    linear-gradient(90deg, transparent 0, transparent 28px, rgba(255,255,255,0.4) 28px, rgba(255,255,255,0.4) 30px);
+  background-size: 104px 104px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}

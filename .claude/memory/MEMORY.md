@@ -1,0 +1,8 @@
+- [Sidebar Full Height Layout](feedback_sidebar_layout.md) — Sidebar must always fill full height with flexbox: top date/time, middle scrollable menus, bottom fixed controls
+- [CrudToolbar Layout Standard](feedback_crudtoolbar_layout.md) — All modules must place CrudToolbar at bottom with centered buttons, Print, Export Excel, and extensible menu
+- [Mobile Responsive Pattern](feedback_mobile_responsive.md) — Use MUI Drawer overlay for mobile, CSS Grid for desktop; never use grid columns for mobile sidebar
+- [Windows Form MenuStrip](feedback_menustrip.md) — Replace horizontal button menu with Windows Form style MenuStrip with dropdown menus
+- [AG Grid Vietnamese Translation](feedback_aggrid_vietnamese.md) — All AG Grid UI elements must use Vietnamese localeText for filters, pagination, menus
+- [Remove PageHeader from Modules](feedback_remove_pageheader.md) — Do not use PageHeader component in module forms - tab title is sufficient
+- [Icon Standards](reference_icon_standards.md) — Standardized lucide-react icon mapping for all CRUD, navigation, file operations, and medical features
+- [PWA Configuration](reference_pwa.md) — PWA enabled via next-pwa with manifest.json for native app installation
