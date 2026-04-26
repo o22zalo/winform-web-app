@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Box,
   Paper,
@@ -23,8 +23,13 @@ import {
   Stack,
   Alert,
 } from '@mui/material'
-import { CrudToolbar } from '@/components/common/CrudToolbar'
+import { Plus, Pencil, Trash2, Printer, FileSpreadsheet, Shield, Users } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { ColDef } from 'ag-grid-community'
+import { AppGrid } from '@/components/common/AppGrid'
+import { FormDialog, ConfirmDialog } from '@/components/common/FormDialog'
 import { apiClient } from '@/lib/apiClient'
+import { useApiError } from '@/hooks/useApiError'
 
 interface Role {
   id: number
@@ -53,62 +58,92 @@ interface RolePermission {
   granted: boolean
 }
 
+interface UserByRole {
+  username: string
+  fullName: string
+  email: string
+  assigned_at: string
+  assigned_by: string
+}
+
 export function RoleManagementModule() {
-  const [roles, setRoles] = useState<Role[]>([])
-  const [modules, setModules] = useState<Module[]>([])
-  const [permissions, setPermissions] = useState<Permission[]>([])
+  const queryClient = useQueryClient()
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [rolePermissions, setRolePermissions] = useState<Record<number, boolean>>({})
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
+  const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false)
+  const [formData, setFormData] = useState<Partial<Role>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { handleError, ErrorSnackbar } = useApiError()
 
-  useEffect(() => {
-    console.log('RoleManagementModule mounted, useEffect running')
-    loadRoles()
-    loadModules()
-    loadPermissions()
-  }, [])
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => apiClient.get<Role[]>('/api/admin/roles'),
+  })
 
-  console.log('RoleManagementModule render, roles:', roles.length, 'modules:', modules.length, 'permissions:', permissions.length)
+  const { data: modules = [] } = useQuery({
+    queryKey: ['modules'],
+    queryFn: () => apiClient.get<Module[]>('/api/admin/modules'),
+  })
 
-  const loadRoles = async () => {
-    try {
-      console.log('Loading roles...')
-      const data = await apiClient.get<Role[]>('/api/admin/roles')
-      console.log('Roles loaded:', data)
-      setRoles(data)
-    } catch (err) {
-      console.error('Failed to load roles:', err)
-      setError('Không thể tải danh sách vai trò')
-    }
-  }
+  const { data: permissions = [] } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => apiClient.get<Permission[]>('/api/admin/permissions'),
+  })
 
-  const loadModules = async () => {
-    try {
-      console.log('Loading modules...')
-      const data = await apiClient.get<Module[]>('/api/admin/modules')
-      console.log('Modules loaded:', data)
-      setModules(data)
-    } catch (err) {
-      console.error('Failed to load modules:', err)
-      setError('Không thể tải danh sách module')
-    }
-  }
+  const { data: usersByRole = [] } = useQuery({
+    queryKey: ['usersByRole', selectedRole?.id],
+    queryFn: () => apiClient.get<UserByRole[]>(`/api/admin/roles/${selectedRole?.id}/users`),
+    enabled: !!selectedRole?.id && usersDialogOpen,
+  })
 
-  const loadPermissions = async () => {
-    try {
-      console.log('Loading permissions...')
-      const data = await apiClient.get<Permission[]>('/api/admin/permissions')
-      console.log('Permissions loaded:', data)
-      setPermissions(data)
-    } catch (err) {
-      console.error('Failed to load permissions:', err)
-      setError('Không thể tải danh sách quyền')
-    }
-  }
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Role>) => apiClient.post<Role>('/api/admin/roles', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      setFormDialogOpen(false)
+      setFormData({})
+    },
+    onError: (error) => handleError(error, 'tạo vai trò'),
+  })
 
-  const handleEditRole = async (role: Role) => {
+  const updateMutation = useMutation({
+    mutationFn: (data: Role) => apiClient.put<Role>(`/api/admin/roles/${data.id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      setFormDialogOpen(false)
+      setFormData({})
+      setSelectedRole(null)
+    },
+    onError: (error) => handleError(error, 'cập nhật vai trò'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiClient.put(`/api/admin/roles/${id}`, { isActive: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      setConfirmOpen(false)
+      setSelectedRole(null)
+    },
+    onError: (error) => handleError(error, 'xóa vai trò'),
+  })
+
+  const columnDefs: ColDef<Role>[] = [
+    { field: 'code', headerName: 'Mã vai trò', width: 150 },
+    { field: 'name', headerName: 'Tên vai trò', width: 200 },
+    { field: 'description', headerName: 'Mô tả', flex: 1 },
+    {
+      field: 'is_active',
+      headerName: 'Trạng thái',
+      width: 120,
+      valueFormatter: (params) => (params.value ? 'Hoạt động' : 'Ngưng'),
+    },
+  ]
+
+  const handleOpenPermissionDialog = async (role: Role) => {
     setSelectedRole(role)
     setLoading(true)
     setError('')
@@ -120,9 +155,9 @@ export function RoleManagementModule() {
         permMap[rp.permission_id] = rp.granted
       })
       setRolePermissions(permMap)
-      setDialogOpen(true)
-    } catch (err: any) {
-      setError(err.message || 'Lỗi tải quyền của vai trò')
+      setPermissionDialogOpen(true)
+    } catch (err) {
+      setError('Không thể tải quyền vai trò')
     } finally {
       setLoading(false)
     }
@@ -135,25 +170,20 @@ export function RoleManagementModule() {
     setError('')
 
     try {
-      const permissionsToUpdate = Object.entries(rolePermissions)
-        .filter(([permId]) => permId && permId !== 'null' && permId !== 'undefined')
-        .map(([permId, granted]) => ({
-          permission_id: parseInt(permId),
-          granted,
-        }))
+      const permissionsToSave = Object.entries(rolePermissions).map(([permId, granted]) => ({
+        permission_id: parseInt(permId),
+        granted,
+      }))
 
       await apiClient.post(`/api/admin/roles/${selectedRole.id}/permissions`, {
-        permissions: permissionsToUpdate,
+        permissions: permissionsToSave,
       })
 
-      // Reload permissions to show updated data
-      await handleEditRole(selectedRole)
-
-      setDialogOpen(false)
+      setPermissionDialogOpen(false)
       setSelectedRole(null)
       setRolePermissions({})
-    } catch (err: any) {
-      setError(err.message || 'Lỗi lưu quyền')
+    } catch (err) {
+      setError('Không thể lưu quyền vai trò')
     } finally {
       setLoading(false)
     }
@@ -181,62 +211,224 @@ export function RoleManagementModule() {
 
   const isModuleFullySelected = (moduleId: number) => {
     const modulePerms = getModulePermissions(moduleId)
-    return modulePerms.every((p) => rolePermissions[p.id] === true)
+    return modulePerms.length > 0 && modulePerms.every((p) => rolePermissions[p.id] === true)
+  }
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const html = `
+      <html>
+        <head>
+          <title>Danh sách vai trò</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; color: #1976d2; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background-color: #1976d2; color: white; padding: 10px; text-align: left; border: 1px solid #ddd; }
+            td { padding: 8px; border: 1px solid #ddd; }
+            tr:nth-child(even) { background-color: #f2f2f2; }
+            .print-date { text-align: right; font-size: 12px; color: #666; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>DANH SÁCH VAI TRÒ</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Mã vai trò</th>
+                <th>Tên vai trò</th>
+                <th>Mô tả</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roles
+                .map(
+                  (role) => `
+                <tr>
+                  <td>${role.code}</td>
+                  <td>${role.name}</td>
+                  <td>${role.description || ''}</td>
+                  <td>${role.is_active ? 'Hoạt động' : 'Ngưng'}</td>
+                </tr>
+              `
+                )
+                .join('')}
+            </tbody>
+          </table>
+          <div class="print-date">Ngày in: ${new Date().toLocaleString('vi-VN')}</div>
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
+  }
+
+  const handleExportExcel = () => {
+    const headers = ['Mã vai trò', 'Tên vai trò', 'Mô tả', 'Trạng thái']
+    let csv = headers.join(',') + '\n'
+
+    roles.forEach((role) => {
+      const row = [
+        role.code,
+        role.name,
+        role.description || '',
+        role.is_active ? 'Hoạt động' : 'Ngưng',
+      ]
+      csv += row.map((cell) => `"${cell}"`).join(',') + '\n'
+    })
+
+    const BOM = '﻿'
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `vai-tro-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
   }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Mã vai trò</TableCell>
-                  <TableCell>Tên vai trò</TableCell>
-                  <TableCell>Mô tả</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell align="center">Thao tác</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {roles.map((role) => (
-                  <TableRow key={role.id} hover>
-                    <TableCell>{role.code}</TableCell>
-                    <TableCell>{role.name}</TableCell>
-                    <TableCell>{role.description}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={role.is_active ? 'Hoạt động' : 'Ngừng'}
-                        color={role.is_active ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button size="small" onClick={() => handleEditRole(role)}>
-                        Phân quyền
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Box>
-      <Box sx={{ flexShrink: 0, p: 1, pt: 0, backgroundColor: 'background.default' }}>
-        <CrudToolbar
-          module="users"
-          onRefresh={loadRoles}
+      <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, overflow: 'hidden' }}>
+        <AppGrid
+          rowData={roles}
+          columnDefs={columnDefs}
+          loading={rolesLoading}
+          onRowSelected={(role) => setSelectedRole(role)}
         />
       </Box>
 
-      {/* Dialog phân quyền */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Phân quyền cho vai trò: {selectedRole?.name}
-        </DialogTitle>
-        <DialogContent>
+      <Box sx={{ flexShrink: 0, p: 1, pt: 0, backgroundColor: 'background.default' }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 1,
+            py: 0.75,
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            flexWrap: 'wrap',
+            gap: { xs: 0.5, sm: 1 },
+          }}
+        >
+          <Button
+            startIcon={<Plus size={16} />}
+            onClick={() => {
+              setFormData({})
+              setSelectedRole(null)
+              setFormDialogOpen(true)
+            }}
+          >
+            Thêm
+          </Button>
+          <Button
+            startIcon={<Pencil size={16} />}
+            onClick={() => {
+              if (selectedRole) {
+                setFormData(selectedRole)
+                setFormDialogOpen(true)
+              }
+            }}
+            disabled={!selectedRole}
+          >
+            Sửa
+          </Button>
+          <Button
+            startIcon={<Trash2 size={16} />}
+            onClick={() => selectedRole && setConfirmOpen(true)}
+            disabled={!selectedRole}
+            color="error"
+          >
+            Xóa
+          </Button>
+          <Button
+            startIcon={<Shield size={16} />}
+            onClick={() => selectedRole && handleOpenPermissionDialog(selectedRole)}
+            disabled={!selectedRole}
+          >
+            Phân quyền
+          </Button>
+          <Button
+            startIcon={<Users size={16} />}
+            onClick={() => selectedRole && setUsersDialogOpen(true)}
+            disabled={!selectedRole}
+          >
+            Xem User
+          </Button>
+          <Button startIcon={<Printer size={16} />} onClick={handlePrint}>
+            In
+          </Button>
+          <Button startIcon={<FileSpreadsheet size={16} />} onClick={handleExportExcel}>
+            Xuất Excel
+          </Button>
+        </Stack>
+      </Box>
+
+      <FormDialog
+        open={formDialogOpen}
+        title={selectedRole ? 'Sửa vai trò' : 'Thêm vai trò'}
+        onClose={() => {
+          setFormDialogOpen(false)
+          setFormData({})
+          setSelectedRole(null)
+        }}
+        onConfirm={() => {
+          if (selectedRole) {
+            updateMutation.mutate({ ...selectedRole, ...formData } as Role)
+          } else {
+            createMutation.mutate(formData)
+          }
+        }}
+      >
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Mã vai trò"
+            value={formData.code || ''}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            disabled={!!selectedRole}
+            fullWidth
+          />
+          <TextField
+            label="Tên vai trò"
+            value={formData.name || ''}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            fullWidth
+          />
+          <TextField
+            label="Mô tả"
+            value={formData.description || ''}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            multiline
+            rows={3}
+            fullWidth
+          />
+        </Stack>
+      </FormDialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa vai trò "${selectedRole?.name}"?`}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => selectedRole && deleteMutation.mutate(selectedRole.id)}
+      />
+
+      <Dialog
+        open={permissionDialogOpen}
+        onClose={() => setPermissionDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Phân quyền: {selectedRole?.name}</DialogTitle>
+        <DialogContent dividers>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
@@ -288,12 +480,51 @@ export function RoleManagementModule() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Hủy</Button>
+          <Button onClick={() => setPermissionDialogOpen(false)}>Hủy</Button>
           <Button onClick={handleSavePermissions} variant="contained" disabled={loading}>
             {loading ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={usersDialogOpen} onClose={() => setUsersDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Danh sách User - {selectedRole?.name}</DialogTitle>
+        <DialogContent dividers>
+          {usersByRole.length === 0 ? (
+            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
+              Chưa có user nào được gán vai trò này
+            </Typography>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tài khoản</TableCell>
+                    <TableCell>Họ tên</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Ngày gán</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {usersByRole.map((user) => (
+                    <TableRow key={user.username}>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>{user.fullName}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{new Date(user.assigned_at).toLocaleDateString('vi-VN')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsersDialogOpen(false)}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
+
+      <ErrorSnackbar />
     </Box>
   )
 }

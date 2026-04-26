@@ -330,4 +330,18 @@ export const roleController = {
       return errorResponse(res, 'Lỗi lấy danh sách người dùng', 500)
     }
   },
+
+  /**
+   * GET /api/admin/roles/:id/users
+   */
+  async getUsersByRole(req, res) {
+    try {
+      const { id } = req.params
+      const result = await roleRepository.getUsersByRole(id)
+      return successResponse(res, result.rows, 'Lấy danh sách users theo vai trò thành công')
+    } catch (error) {
+      logger.error('Error in getUsersByRole', error)
+      return errorResponse(res, 'Lỗi lấy danh sách users theo vai trò', 500)
+    }
+  },
 }

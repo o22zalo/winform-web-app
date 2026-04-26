@@ -188,4 +188,28 @@ export const roleRepository = {
       throw new DatabaseError('Lỗi xóa quyền vai trò', error)
     }
   },
+
+  /**
+   * Lấy danh sách users có vai trò này
+   */
+  async getUsersByRole(roleId) {
+    try {
+      return await dbQuery(
+        `SELECT
+           nv.taikhoan as username,
+           CONCAT(nv.holot, ' ', nv.ten) as "fullName",
+           nv.email,
+           ur.assigned_at,
+           ur.assigned_by
+         FROM webauth.user_roles ur
+         JOIN current.dmnhanvien nv ON ur.username = nv.taikhoan
+         WHERE ur.role_id = $1
+         ORDER BY nv.taikhoan`,
+        [roleId]
+      )
+    } catch (error) {
+      logger.error('Database error in getUsersByRole', error)
+      throw new DatabaseError('Lỗi truy vấn users theo vai trò', error)
+    }
+  },
 }

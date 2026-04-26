@@ -15,6 +15,7 @@ router.get('/roles/:id', roleController.getRoleById)
 router.post('/roles', roleController.createRole)
 router.put('/roles/:id', roleController.updateRole)
 router.get('/roles/:id/permissions', roleController.getRolePermissions)
+router.get('/roles/:id/users', roleController.getUsersByRole)
 
 // Gán quyền cho vai trò
 router.post('/roles/:id/permissions', roleController.assignPermissionToRole)
