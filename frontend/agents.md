@@ -112,6 +112,7 @@ apiClient tự động throw `ApiError` với các trường:
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/apiClient'
 import { useApiError } from '@/hooks/useApiError'
+import { GridSearchBox } from '@/components/common/GridSearchBox'
 
 function MyComponent() {
   const queryClient = useQueryClient()
@@ -198,13 +199,21 @@ export function MyModule() {
         flexDirection: 'column', 
         overflow: 'hidden' 
       }}>
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Danh sách dữ liệu
+            </Typography>
+            <GridSearchBox value={searchValue} onChange={setSearchValue} />
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <AppGrid
             rowData={data}
             columnDefs={columnDefs}
             onRowSelected={setSelected}
             loading={isLoading}
           />
+          </Box>
         </Box>
       </Box>
 
@@ -223,8 +232,6 @@ export function MyModule() {
           onClose={handleClose}
           editDisabled={!selected}
           deleteDisabled={!selected}
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
         />
       </Box>
 
@@ -296,6 +303,48 @@ export function MyModule() {
 4. Di chuyển grid vào vùng flex: 1
 5. Di chuyển toolbar vào vùng flexShrink: 0
 6. Kiểm tra padding để grid và toolbar sát nhau
+
+## Grid Search Layout Standard
+
+**CRITICAL RULE**: Chức năng tìm kiếm dữ liệu trên lưới KHÔNG nằm trong `CrudToolbar`.
+
+### ✅ ĐÚNG - Search nằm trong header panel danh sách:
+
+```typescript
+import { GridSearchBox } from '@/components/common/GridSearchBox'
+
+<Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+  <Box
+    sx={{
+      px: 1,
+      py: 0.75,
+      borderBottom: '1px solid',
+      borderColor: 'divider',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1,
+      flexWrap: 'wrap',
+    }}
+  >
+    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+      Danh sách khoa phòng
+    </Typography>
+    <GridSearchBox value={searchValue} onChange={setSearchValue} />
+  </Box>
+
+  <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <AppGrid rowData={filteredData} columnDefs={columnDefs} />
+  </Box>
+</Box>
+```
+
+### Quy tắc bắt buộc:
+
+1. `CrudToolbar` không nhận `searchValue` hoặc `onSearchChange`.
+2. Search dùng component chung `GridSearchBox` từ `frontend/src/components/common/GridSearchBox.tsx`.
+3. Search đặt cùng panel với tiêu đề danh sách, nằm bên phải tiêu đề bằng `ml: 'auto'`.
+4. Logic filter vẫn nằm trong module, dùng data đã lọc cho grid, print và export.
+5. Không đổi cách lọc dữ liệu khi chỉ di chuyển vị trí UI search.
 
 ## AG Grid Configuration Standard
 
@@ -524,4 +573,3 @@ const handleExportExcel = () => {
 - TD: border 1px solid #ddd, padding 8px
 - TR even: background #f2f2f2
 - Print date: right align, font-size 12px, color #666
-

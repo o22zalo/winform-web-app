@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ColDef } from 'ag-grid-community'
 import { CrudToolbar } from '@/components/common/CrudToolbar'
 import { AppGrid } from '@/components/common/AppGrid'
+import { GridSearchBox } from '@/components/common/GridSearchBox'
 import { ConfirmDialog } from '@/components/common/FormDialog'
 import { useAppStore } from '@/lib/store/uiStore'
 import { apiClient } from '@/lib/apiClient'
@@ -313,10 +314,22 @@ export function DepartmentsModule() {
             backgroundColor: 'background.paper',
           }}
         >
-          <Box sx={{ px: 1, py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box
+            sx={{
+              px: 1,
+              py: 0.75,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
               Danh sách khoa phòng
             </Typography>
+            <GridSearchBox value={searchValue} onChange={setSearchValue} />
           </Box>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <AppGrid
@@ -380,8 +393,6 @@ export function DepartmentsModule() {
             editDisabled={!selectedDepartment || isMutating}
             deleteDisabled={!selectedDepartment || isMutating}
             saveDisabled={!isFormEditable || isMutating}
-            searchValue={searchValue}
-            onSearchChange={setSearchValue}
             onPrint={handlePrint}
             onExportExcel={handleExportExcel}
             additionalMenuItems={[

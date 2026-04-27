@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Stack, TextField } from '@mui/material'
+import { Box, Stack, TextField, Typography } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ColDef } from 'ag-grid-community'
 import { CrudToolbar } from '@/components/common/CrudToolbar'
 import { AppGrid } from '@/components/common/AppGrid'
+import { GridSearchBox } from '@/components/common/GridSearchBox'
 import { FormDialog, ConfirmDialog } from '@/components/common/FormDialog'
 import { useAppStore } from '@/lib/store/uiStore'
 import { apiClient } from '@/lib/apiClient'
@@ -184,14 +185,44 @@ export function UsersModule() {
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <AppGrid
-            rowData={filteredUsers}
-            columnDefs={columnDefs}
-            onRowSelected={setSelectedUser}
-            loading={isLoading}
-            getRowId={(params) => params.data.manv}
-          />
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+          }}
+        >
+          <Box
+            sx={{
+              px: 1,
+              py: 0.75,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Danh sách nhân viên
+            </Typography>
+            <GridSearchBox value={searchValue} onChange={setSearchValue} />
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <AppGrid
+              rowData={filteredUsers}
+              columnDefs={columnDefs}
+              onRowSelected={setSelectedUser}
+              loading={isLoading}
+              getRowId={(params) => params.data.manv}
+            />
+          </Box>
         </Box>
       </Box>
       <Box sx={{ flexShrink: 0, p: 1, pt: 0, backgroundColor: 'background.default' }}>
@@ -214,8 +245,6 @@ export function UsersModule() {
           }}
           editDisabled={!selectedUser}
           deleteDisabled={!selectedUser}
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
           onPrint={handlePrint}
           onExportExcel={handleExportExcel}
           additionalMenuItems={[

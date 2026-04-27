@@ -48,6 +48,7 @@ graph TB
     subgraph "Common Components"
         AppGrid[AppGrid<br/>AG Grid wrapper]
         CrudToolbar[CrudToolbar<br/>Bottom toolbar]
+        GridSearchBox[GridSearchBox<br/>Grid search header]
         FormDialog[FormDialog<br/>Modal form]
         PermGuard[PermissionGuard<br/>Access control]
     end
@@ -62,26 +63,31 @@ graph TB
     
     Users --> AppGrid
     Users --> CrudToolbar
+    Users --> GridSearchBox
     Users --> FormDialog
     Users --> NhanvienAPI
     
     Patients --> AppGrid
     Patients --> CrudToolbar
+    Patients --> GridSearchBox
     Patients --> FormDialog
     Patients --> PatientsAPI
     
     Departments --> AppGrid
     Departments --> CrudToolbar
+    Departments --> GridSearchBox
     Departments --> FormDialog
     Departments --> DeptAPI
     
     Roles --> AppGrid
     Roles --> CrudToolbar
+    Roles --> GridSearchBox
     Roles --> FormDialog
     Roles --> RolesAPI
     
     UserPerms --> AdminAPI
     UserPerms --> RolesAPI
+    UserPerms --> GridSearchBox
     
     click Users "src/components/modules/UsersModule.tsx"
     click Patients "src/components/modules/PatientsModule.tsx"
@@ -90,6 +96,7 @@ graph TB
     click UserPerms "src/components/modules/UserPermissionModule.tsx"
     click AppGrid "src/components/common/AppGrid.tsx"
     click CrudToolbar "src/components/common/CrudToolbar.tsx"
+    click GridSearchBox "src/components/common/GridSearchBox.tsx"
     click FormDialog "src/components/common/FormDialog.tsx"
     click PermGuard "src/components/common/PermissionGuard.tsx"
     
@@ -115,8 +122,12 @@ graph TB
 
 - **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx)
   - Toolbar dock-bottom với các nút: Thêm, Sửa, Xóa, In, Xuất Excel
-  - Search box tích hợp
   - Permission guards tự động
+
+- **GridSearchBox** - [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx)
+  - Ô tìm kiếm dữ liệu trên lưới
+  - Đặt ở header panel danh sách, canh phải cạnh tiêu đề
+  - Logic lọc vẫn nằm trong module
 
 - **FormDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx)
   - Modal form để thêm/sửa nhân viên
@@ -206,6 +217,7 @@ Response: {
 ### Components sử dụng
 - **AppGrid** - [AppGrid.tsx](src/components/common/AppGrid.tsx) - Hiển thị danh sách bệnh nhân
 - **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx) - Toolbar với CRUD buttons
+- **GridSearchBox** - [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx) - Tìm kiếm trong header panel danh sách
 - **FormDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Form thêm/sửa bệnh nhân
 - **ConfirmDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Xác nhận xóa
 
@@ -252,6 +264,7 @@ interface Patient {
 ### Components sử dụng
 - **AppGrid** - [AppGrid.tsx](src/components/common/AppGrid.tsx) - Hiển thị danh sách khoa phòng
 - **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx) - Toolbar với CRUD buttons
+- **GridSearchBox** - [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx) - Tìm kiếm trong header panel danh sách
 - **FormDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Form thêm/sửa khoa phòng
 - **ConfirmDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Xác nhận xóa
 
@@ -298,6 +311,7 @@ interface Department {
 ### Components sử dụng
 - **AppGrid** - [AppGrid.tsx](src/components/common/AppGrid.tsx) - Hiển thị danh sách vai trò
 - **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx) - Toolbar với CRUD buttons + nút "Phân quyền" và "Xem User"
+- **GridSearchBox** - [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx) - Tìm kiếm trong header panel danh sách
 - **FormDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Form thêm/sửa vai trò
 - **ConfirmDialog** - [FormDialog.tsx](src/components/common/FormDialog.tsx) - Xác nhận xóa
 - **Dialog** (MUI) - Dialog phân quyền với checkbox tree
@@ -435,7 +449,8 @@ interface UserByRole {
 - **TableContainer, TableHead, TableBody, TableRow, TableCell** (MUI)
 - **Dialog** (MUI) - Dialog gán vai trò
 - **Autocomplete** (MUI) - Select user và role
-- **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx) - Toolbar với search
+- **CrudToolbar** - [CrudToolbar.tsx](src/components/common/CrudToolbar.tsx) - Toolbar với các nút thao tác
+- **GridSearchBox** - [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx) - Tìm kiếm trong header panel danh sách
 - **Chip** (MUI) - Hiển thị roles của user
 - **IconButton** (MUI) - Nút xóa role
 
@@ -527,10 +542,21 @@ Response: {
 - **Mô tả**: Toolbar dock-bottom với các nút CRUD chuẩn
 - **Features**:
   - Buttons: Thêm, Sửa, Xóa, In, Xuất Excel, Làm mới
-  - Search box tích hợp
   - Permission guards tự động (khi có prop `module`)
   - Extensible menu (thêm nút custom)
   - Centered layout
+
+### GridSearchBox
+- **File**: [GridSearchBox.tsx](src/components/common/GridSearchBox.tsx)
+- **Mô tả**: Ô tìm kiếm dùng chung cho dữ liệu hiển thị trên lưới/bảng
+- **Vị trí chuẩn**:
+  - Nằm trong header panel danh sách cùng với tiêu đề form
+  - Canh phải bằng `ml: 'auto'`
+  - Không đặt trong `CrudToolbar`
+- **Props**:
+  - `value`: Giá trị tìm kiếm hiện tại
+  - `onChange`: Callback cập nhật từ khóa tìm kiếm
+  - `placeholder`: Placeholder tùy chọn, mặc định `Tìm kiếm...`
 
 ### FormDialog
 - **File**: [FormDialog.tsx](src/components/common/FormDialog.tsx)
@@ -771,6 +797,7 @@ CORS_ORIGIN=http://localhost:3000
 2. **All modules**
    - Verify Print function có đầy đủ style
    - Verify Export Excel có UTF-8 BOM
+   - Verify search dùng `GridSearchBox` trong header panel danh sách, không nằm trong `CrudToolbar`
    - Verify snake_case cho tất cả API fields
 
 ---

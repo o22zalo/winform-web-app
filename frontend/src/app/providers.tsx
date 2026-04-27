@@ -21,6 +21,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
+
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) {
+      return undefined
+    }
+
+    const registerServiceWorker = () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+    }
+
+    if (document.readyState === 'complete') {
+      registerServiceWorker()
+      return undefined
+    }
+
+    window.addEventListener('load', registerServiceWorker)
+    return () => window.removeEventListener('load', registerServiceWorker)
   }, [])
 
   if (!mounted) {

@@ -144,21 +144,38 @@ Module screens must keep the main grid stretched and the CRUD toolbar docked at 
 
 Do not place `CrudToolbar` elsewhere.
 
-### 5. Do not add `PageHeader` to module forms
+### 5. Put grid search in the list panel header
+
+Do not put grid-search inputs inside `CrudToolbar`.
+
+Use the shared `GridSearchBox` component and place it in the same panel header as the list title, aligned to the right. Keep the filtering logic in the module and continue passing the filtered rows to the grid, print, and export handlers.
+
+```tsx
+<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+    Danh sách khoa phòng
+  </Typography>
+  <GridSearchBox value={searchValue} onChange={setSearchValue} />
+</Box>
+```
+
+`CrudToolbar` must not receive `searchValue` or `onSearchChange`.
+
+### 6. Do not add `PageHeader` to module forms
 
 The tab title is sufficient. Keep module UIs compact.
 
-### 6. AG Grid must use Vietnamese localization
+### 7. AG Grid must use Vietnamese localization
 
 Use the shared locale configuration from `frontend/src/lib/agGridVietnamese.ts`.
 
-### 7. Print and Export Excel are expected where `CrudToolbar` exposes them
+### 8. Print and Export Excel are expected where `CrudToolbar` exposes them
 
 When a module includes print/export actions, implement real functionality. Do not leave placeholder handlers.
 
 For CSV export, include UTF-8 BOM so Vietnamese text renders correctly in Excel.
 
-### 8. Respect permission-aware UI patterns
+### 9. Respect permission-aware UI patterns
 
 Use `PermissionGuard` or pass `module` into `CrudToolbar` so actions align with the permission system.
 
@@ -193,6 +210,7 @@ Use `PermissionGuard` or pass `module` into `CrudToolbar` so actions align with 
 ### Frontend
 - `frontend/src/lib/apiClient.ts` - centralized HTTP client
 - `frontend/src/components/common/CrudToolbar.tsx` - bottom action toolbar
+- `frontend/src/components/common/GridSearchBox.tsx` - shared right-aligned grid search input
 - `frontend/src/components/common/AppGrid.tsx` - shared grid wrapper
 - `frontend/src/hooks/useApiError.ts` - standard mutation error handling
 - `frontend/src/lib/agGridVietnamese.ts` - AG Grid Vietnamese locale

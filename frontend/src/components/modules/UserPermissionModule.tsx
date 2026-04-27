@@ -28,6 +28,7 @@ import {
 } from '@mui/material'
 import { Trash2, UserPlus } from 'lucide-react'
 import { CrudToolbar } from '@/components/common/CrudToolbar'
+import { GridSearchBox } from '@/components/common/GridSearchBox'
 import { apiClient } from '@/lib/apiClient'
 import { useAppStore } from '@/lib/store/uiStore'
 
@@ -224,9 +225,37 @@ export function UserPermissionModule() {
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <TableContainer component={Paper}>
-            <Table size="small">
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+          }}
+        >
+          <Box
+            sx={{
+              px: 1,
+              py: 0.75,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Danh sách người dùng
+            </Typography>
+            <GridSearchBox value={searchTerm} onChange={setSearchTerm} />
+          </Box>
+          <TableContainer component={Box} sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
                   <TableCell>Tài khoản</TableCell>
@@ -257,8 +286,6 @@ export function UserPermissionModule() {
         <CrudToolbar
           module="users"
           onRefresh={loadUsers}
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
           onPrint={handlePrint}
           onExportExcel={handleExportExcel}
           onClose={() => {

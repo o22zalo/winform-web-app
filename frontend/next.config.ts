@@ -1,17 +1,12 @@
 import type { NextConfig } from 'next'
-import withPWAInit from '@ducanh2912/next-pwa'
-
-const withPWA = withPWAInit({
-  dest: 'public',
-  register: true,
-  disable: process.env.NODE_ENV === 'development',
-})
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['lucide-react'],
   output: 'standalone',
-  turbopack: {},
+  turbopack: {
+    root: process.cwd(),
+  },
 }
 
-export default withPWA(nextConfig)
+export default nextConfig

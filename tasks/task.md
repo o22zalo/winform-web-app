@@ -124,6 +124,20 @@ Khi nhận task mới, agent phải:
   })
   ```
 
+- [ ] **Grid search**: Không đặt tìm kiếm trong `CrudToolbar`. Dùng `GridSearchBox` trong header panel danh sách, canh phải cạnh tiêu đề.
+  ```typescript
+  import { GridSearchBox } from '@/components/common/GridSearchBox'
+
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+      Danh sách dữ liệu
+    </Typography>
+    <GridSearchBox value={searchValue} onChange={setSearchValue} />
+  </Box>
+  ```
+
+  Logic lọc dữ liệu vẫn nằm trong module và dùng data đã lọc cho grid, print, export. `CrudToolbar` không nhận `searchValue` hoặc `onSearchChange`.
+
 - [ ] **Error handling**: Sử dụng `useApiError` hook
   ```typescript
   const { handleError, ErrorSnackbar } = useApiError()
@@ -257,6 +271,7 @@ Khi nhận task mới, agent phải:
 - [ ] **Không có TypeScript errors**
 - [ ] **Không có console warnings** (đặc biệt AG Grid deprecation)
 - [ ] **Layout đúng**: Grid scroll độc lập, toolbar luôn hiển thị bottom
+- [ ] **Search đúng vị trí**: Ô tìm kiếm nằm trong header panel danh sách, sát cạnh phải tiêu đề; không nằm trong `CrudToolbar`
 - [ ] **Responsive**: Test trên mobile (sidebar overlay) và desktop
 - [ ] **Dark mode**: Test cả light và dark mode
 

@@ -1,7 +1,7 @@
 'use client'
 
-import { Button, Stack, TextField, Menu, MenuItem, IconButton, InputAdornment } from '@mui/material'
-import { Plus, Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Printer, FileSpreadsheet, MoreVertical, RefreshCw, XCircle } from 'lucide-react'
+import { Button, Stack, Menu, MenuItem, IconButton } from '@mui/material'
+import { Plus, Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Printer, FileSpreadsheet, MoreVertical, RefreshCw, XCircle } from 'lucide-react'
 import { useState, type MouseEvent } from 'react'
 import { PermissionGuard } from './PermissionGuard'
 
@@ -18,8 +18,6 @@ interface CrudToolbarProps {
   onExportExcel?: () => void
   onRefresh?: () => void
   onClose?: () => void
-  searchValue?: string
-  onSearchChange?: (value: string) => void
   editDisabled?: boolean
   deleteDisabled?: boolean
   saveDisabled?: boolean
@@ -172,24 +170,6 @@ export function CrudToolbar(props: CrudToolbarProps) {
             ))}
           </Menu>
         </>
-      ) : null}
-      {props.onSearchChange ? (
-        <TextField
-          placeholder="Tìm kiếm..."
-          value={props.searchValue ?? ''}
-          onChange={(event) => props.onSearchChange?.(event.target.value)}
-          size="small"
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={16} />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ width: 260 }}
-        />
       ) : null}
     </Stack>
   )

@@ -396,22 +396,23 @@ Sau khi hoàn thành tất cả các bước, agent phải báo cáo theo format
 
 ## 📌 TASK HIỆN TẠI
 
-### Task ID: Triển khai form departmentsmodule---quản-lý-khoa-phòng
+### Task ID: Di chuyển chức năng tìm kiếm tất cả form
 
 ### Mô tả yêu cầu:
 
-Triển khai tiếp tục: #3-departmentsmodule---quản-lý-khoa-phòng: src/components/modules/DepartmentsModule.tsx
+Điều chỉnh chức năng tìm kiếm (dữ liệu trên lưới) ở tất cả form hiện có, CURD Toolbar
 
-- Backend sẽ lấy dữ liệu trong current.dmdonvi (madv: Mã đơn vị,tendv: Tên đơn vị)
-- Thiết kế form có 2 thành phần theo column:
-  - Panel chứa lưới danh sách
-  - Panel chứa control để nhập liệu, chỉnh sửa (các button CURDToolbar nằm trong panel này)
+- Loại bỏ chức năng tìm kiếm này trong `CurdToolbar.tsx`
+- Tạo Compent chung để chức năng tìm kiếm này riêng, và các form sẽ đặt phía trên lưới, nằm chung panel với title của form. Ví dụ: trong form quản lý khoa phòng sẽ nằm chung với `<h6 class="MuiTypography-root MuiTypography-subtitle2 css-3dblkr">Danh sách khoa phòng</h6>` và thực hiện canh phải (luôn nằm sát cạnh phải)
+- Logic tìm kiếm vẫn dữ, không được thay đổi
+- Ghi nhận qui tắt này vào `AGENTS.md`, `tasks\task.md`,
+- Cập nhật tài liệu vào `frontend\design.md`
 
 ### Phạm vi dự kiến:
 
 - [x] Frontend only
-- [x] Backend only
-- [x] Full-stack (cả Frontend và Backend)
+- [ ] Backend only
+- [ ] Full-stack (cả Frontend và Backend)
 - [ ] Database migration required
 
 ### Files cần đọc trước:

@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColDef } from 'ag-grid-community'
 import { AppGrid } from '@/components/common/AppGrid'
 import { CrudToolbar } from '@/components/common/CrudToolbar'
+import { GridSearchBox } from '@/components/common/GridSearchBox'
 import { ConfirmDialog, FormDialog } from '@/components/common/FormDialog'
 import { useApiError } from '@/hooks/useApiError'
 import { apiClient } from '@/lib/apiClient'
@@ -346,12 +347,44 @@ export function RoleManagementModule() {
       }}
     >
       <Box sx={{ flex: 1, minHeight: 0, p: 1, pb: 0, overflow: 'hidden' }}>
-        <AppGrid
-          rowData={filteredData}
-          columnDefs={columnDefs}
-          loading={isLoading}
-          onRowSelected={(role) => setSelectedRole(role)}
-        />
+        <Box
+          sx={{
+            height: '100%',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+          }}
+        >
+          <Box
+            sx={{
+              px: 1,
+              py: 0.75,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Danh sách vai trò
+            </Typography>
+            <GridSearchBox value={searchText} onChange={setSearchText} />
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <AppGrid
+              rowData={filteredData}
+              columnDefs={columnDefs}
+              loading={isLoading}
+              onRowSelected={(role) => setSelectedRole(role)}
+            />
+          </Box>
+        </Box>
       </Box>
 
       <Box sx={{ flexShrink: 0, p: 1, pt: 0, backgroundColor: 'background.default' }}>
@@ -366,8 +399,6 @@ export function RoleManagementModule() {
             const closeTab = useAppStore.getState().closeTab
             closeTab('role-management')
           }}
-          searchValue={searchText}
-          onSearchChange={setSearchText}
           editDisabled={!selectedRole}
           deleteDisabled={!selectedRole}
           additionalMenuItems={[
